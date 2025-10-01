@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   Text,
   View,
@@ -11,14 +11,14 @@ import {
   Modal,
   Platform,
   StatusBar,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
-import * as ImagePicker from 'expo-image-picker';
-import { supabase } from '../../lib/supabaseClient';
-import BottomNavbar from '../../components/BottomNavbar';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import * as ImagePicker from "expo-image-picker";
+import { supabase } from "../../lib/supabaseClient";
+import BottomNavbar from "../../components/BottomNavbar";
 
 interface Report {
   id: string;
@@ -43,7 +43,7 @@ export default function HomePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
 
@@ -54,9 +54,11 @@ export default function HomePage() {
   }, []);
 
   const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      router.replace('/(auth)/login');
+      router.replace("/(auth)/login");
     } else {
       setUser(user);
     }
@@ -65,8 +67,9 @@ export default function HomePage() {
   const loadReports = async () => {
     try {
       const { data, error } = await supabase
-        .from('reports')
-        .select(`
+        .from("reports")
+        .select(
+          `
           id,
           user_id,
           license_plate,
@@ -76,19 +79,23 @@ export default function HomePage() {
           created_at,
           status,
           profiles(username, profile_photo_url)
-        `)
-        .order('created_at', { ascending: false });
+        `,
+        )
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      // Transform the data to match our interface
-      const transformedData = data?.map(report => ({
-        ...report,
-        profiles: Array.isArray(report.profiles) ? report.profiles[0] : report.profiles
-      })) || [];
+
+      const transformedData =
+        data?.map((report) => ({
+          ...report,
+          profiles: Array.isArray(report.profiles)
+            ? report.profiles[0]
+            : report.profiles,
+        })) || [];
       setReports(transformedData as Report[]);
     } catch (error) {
-      console.error('Error loading reports:', error);
-      Alert.alert('Chyba', 'Nepodařilo se načíst reporty');
+      console.error(error);
+      Alert.alert("Chyba", "Nepodařilo se načíst reporty");
     } finally {
       setLoading(false);
     }
@@ -96,19 +103,20 @@ export default function HomePage() {
 
   const setupRealtimeSubscription = () => {
     const subscription = supabase
-      .channel('reports')
+      .channel("reports")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'reports',
+          event: "INSERT",
+          schema: "public",
+          table: "reports",
         },
         async (payload) => {
           // Fetch the new report with profile data
           const { data } = await supabase
-            .from('reports')
-            .select(`
+            .from("reports")
+            .select(
+              `
               id,
               user_id,
               license_plate,
@@ -118,19 +126,22 @@ export default function HomePage() {
               created_at,
               status,
               profiles(username, profile_photo_url)
-            `)
-            .eq('id', payload.new.id)
+            `,
+            )
+            .eq("id", payload.new.id)
             .single();
 
           if (data) {
             // Transform the data to match our interface
             const transformedData = {
               ...data,
-              profiles: Array.isArray(data.profiles) ? data.profiles[0] : data.profiles
+              profiles: Array.isArray(data.profiles)
+                ? data.profiles[0]
+                : data.profiles,
             };
-            setReports(prev => [transformedData as Report, ...prev]);
+            setReports((prev) => [transformedData as Report, ...prev]);
           }
-        }
+        },
       )
       .subscribe();
 
@@ -145,51 +156,44 @@ export default function HomePage() {
     setRefreshing(false);
   };
 
-
   const takePicture = async () => {
     if (!cameraRef.current) return;
 
     try {
       setUploading(true);
-      
-      // Get current location
+
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Chyba', 'Potřebujeme přístup k poloze');
+      if (status !== "granted") {
+        Alert.alert("Chyba", "Potřebujeme přístup k poloze");
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({});
-      
-      // Take picture
+
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
       });
 
-      // Upload to Supabase Storage
       const photoUrl = await uploadPhoto(photo.uri);
       if (!photoUrl) {
-        Alert.alert('Chyba', 'Nepodařilo se nahrát fotku');
+        Alert.alert("Chyba", "Nepodařilo se nahrát fotku");
         return;
       }
 
-      // Save to database
-      const { error } = await supabase
-        .from('reports')
-        .insert({
-          user_id: user.id,
-          photo_url: photoUrl,
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
+      const { error } = await supabase.from("reports").insert({
+        user_id: user.id,
+        photo_url: photoUrl,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
 
       if (error) throw error;
 
       setCameraModalVisible(false);
-      Alert.alert('Úspěch', 'Report byl úspěšně přidán!');
+      Alert.alert("Úspěch", "Report byl úspěšně přidán!");
     } catch (error) {
-      console.error('Error taking picture:', error);
-      Alert.alert('Chyba', 'Nepodařilo se vytvořit report');
+      console.error("Error taking picture:", error);
+      Alert.alert("Chyba", "Nepodařilo se vytvořit report");
     } finally {
       setUploading(false);
     }
@@ -197,7 +201,7 @@ export default function HomePage() {
 
   const uploadPhoto = async (uri: string): Promise<string | null> => {
     try {
-      const fileExt = uri.split('.').pop() || 'jpg';
+      const fileExt = uri.split(".").pop() || "jpg";
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `reports/${user.id}/${fileName}`;
 
@@ -206,52 +210,52 @@ export default function HomePage() {
       const uint8Array = new Uint8Array(arrayBuffer);
 
       const { error: uploadError } = await supabase.storage
-        .from('report-photos')
+        .from("report-photos")
         .upload(filePath, uint8Array, {
           contentType: `image/${fileExt}`,
-          cacheControl: '3600',
+          cacheControl: "3600",
         });
 
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage
-        .from('report-photos')
+        .from("report-photos")
         .getPublicUrl(filePath);
 
       return data.publicUrl;
     } catch (error) {
-      console.error('Error uploading photo:', error);
+      console.error("Error uploading photo:", error);
       return null;
     }
   };
 
   const handleTabPress = (tab: string) => {
     switch (tab) {
-      case 'home':
+      case "home":
         break;
-      case 'map':
-        router.push('/(main)/map');
+      case "map":
+        router.push("/(main)/map");
         break;
-      case 'camera':
+      case "camera":
         setCameraModalVisible(true);
         break;
-      case 'leaderboard':
-        router.push('/(main)/leaderboard');
+      case "leaderboard":
+        router.push("/(main)/leaderboard");
         break;
-      case 'profile':
-        router.push('/(main)/profile');
+      case "profile":
+        router.push("/(main)/profile");
         break;
     }
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('cs-CZ', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return date.toLocaleDateString("cs-CZ", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -262,9 +266,9 @@ export default function HomePage() {
         <View style={styles.reportHeader}>
           <View style={styles.userInfo}>
             {item.profiles?.profile_photo_url ? (
-              <Image 
-                source={{ uri: item.profiles.profile_photo_url }} 
-                style={styles.userAvatar} 
+              <Image
+                source={{ uri: item.profiles.profile_photo_url }}
+                style={styles.userAvatar}
               />
             ) : (
               <View style={styles.userAvatarPlaceholder}>
@@ -272,7 +276,7 @@ export default function HomePage() {
               </View>
             )}
             <Text style={styles.reportUser}>
-              {item.profiles?.username || 'Neznámý uživatel'}
+              {item.profiles?.username || "Neznámý uživatel"}
             </Text>
           </View>
           <Text style={styles.reportDate}>{formatDate(item.created_at)}</Text>
@@ -297,7 +301,7 @@ export default function HomePage() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-      
+
       <View style={styles.header}>
         <Text style={styles.title}>Reporty špatného parkování</Text>
       </View>
@@ -323,7 +327,6 @@ export default function HomePage() {
         }
       />
 
-
       {/* Camera Modal */}
       <Modal
         visible={cameraModalVisible}
@@ -342,10 +345,13 @@ export default function HomePage() {
                     <Ionicons name="close" size={24} color="#fff" />
                   </TouchableOpacity>
                 </View>
-                
+
                 <View style={styles.cameraFooter}>
                   <TouchableOpacity
-                    style={[styles.captureButton, uploading && styles.captureButtonDisabled]}
+                    style={[
+                      styles.captureButton,
+                      uploading && styles.captureButtonDisabled,
+                    ]}
                     onPress={takePicture}
                     disabled={uploading}
                   >
@@ -360,8 +366,13 @@ export default function HomePage() {
             </CameraView>
           ) : (
             <View style={styles.permissionContainer}>
-              <Text style={styles.permissionText}>Potřebujeme přístup ke kameře</Text>
-              <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+              <Text style={styles.permissionText}>
+                Potřebujeme přístup ke kameře
+              </Text>
+              <TouchableOpacity
+                style={styles.permissionButton}
+                onPress={requestPermission}
+              >
                 <Ionicons name="camera" size={24} color="#fff" />
                 <Text style={styles.permissionButtonText}>Povolit kameru</Text>
               </TouchableOpacity>
@@ -377,25 +388,25 @@ export default function HomePage() {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#f8fafc',
-    paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight || 0,
+    backgroundColor: "#f8fafc",
+    paddingTop: Platform.OS === "ios" ? 50 : StatusBar.currentHeight || 0,
   },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#e2e8f0",
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1e293b',
+    fontWeight: "700",
+    color: "#1e293b",
   },
   feedList: {
     flex: 1,
@@ -404,90 +415,90 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   reportItem: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   reportImage: {
-    width: '100%',
+    width: "100%",
     height: 200,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: "#f1f5f9",
   },
   reportContent: {
     padding: 16,
   },
   reportHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   userAvatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: "#f1f5f9",
   },
   userAvatarPlaceholder: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
   },
   reportUser: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
+    color: "#1e293b",
   },
   reportDate: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#64748b",
   },
   licensePlate: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#3b82f6',
+    fontWeight: "500",
+    color: "#3b82f6",
     marginBottom: 8,
   },
   locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   locationText: {
     fontSize: 12,
-    color: '#64748b',
+    color: "#64748b",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 60,
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: "600",
+    color: "#64748b",
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#94a3b8',
-    textAlign: 'center',
+    color: "#94a3b8",
+    textAlign: "center",
     marginTop: 8,
     paddingHorizontal: 40,
   },
@@ -499,11 +510,11 @@ const styles = StyleSheet.create({
   },
   cameraOverlay: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   cameraHeader: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 20,
+    position: "absolute",
+    top: Platform.OS === "ios" ? 50 : 20,
     left: 20,
     right: 20,
     zIndex: 1,
@@ -512,60 +523,60 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   cameraFooter: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 40,
     left: 0,
     right: 0,
-    alignItems: 'center',
+    alignItems: "center",
   },
   captureButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#ef4444',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#ef4444",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 4,
-    borderColor: '#fff',
+    borderColor: "#fff",
   },
   captureButtonDisabled: {
-    backgroundColor: '#94a3b8',
+    backgroundColor: "#94a3b8",
   },
   captureButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   permissionContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   permissionText: {
     fontSize: 18,
-    color: '#374151',
+    color: "#374151",
     marginBottom: 24,
-    textAlign: 'center',
+    textAlign: "center",
   },
   permissionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#3b82f6',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#3b82f6",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
     gap: 8,
   },
   permissionButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
