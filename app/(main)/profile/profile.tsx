@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, ScrollView, Platform, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Image, ScrollView, Platform, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useForm, Controller } from 'react-hook-form';
@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { TextInput } from 'react-native';
 import BottomNavbar from '@/components/BottomNavbar';
 import { supabase } from '@/lib/supabaseClient';
+import styles from './profile.styles';
 
 interface ProfileFormData {
   username: string;
@@ -392,7 +393,7 @@ export default function ProfilePage() {
   );
 }
 
-const styles = StyleSheet.create({
+/* moved to ./profile.styles */
   container: {
     position: "absolute",
     top: 0,

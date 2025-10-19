@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import Animated, {
   withSpring,
   withSequence,
 } from "react-native-reanimated";
+import styles from './splash.styles';
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -57,36 +58,4 @@ export default function SplashScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  logoContainer: {
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  question: {
-    color: '#ef4444',
-    fontSize: 48,
-    fontWeight: '700',
-  }
-});
+// moved to ./splash.styles

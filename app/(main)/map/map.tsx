@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
-import MapView, { Marker } from 'react-native-maps';
+import React, { useEffect, useState, useRef } from "react";
+import MapView, { Marker } from "react-native-maps";
 import {
   View,
-  StyleSheet,
   Alert,
   TouchableOpacity,
   Text,
@@ -11,12 +10,13 @@ import {
   Modal,
   Image,
   ScrollView,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
-import BottomNavbar from '../../components/BottomNavbar';
-import { supabase } from '../../lib/supabaseClient';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import BottomNavbar from "../../components/BottomNavbar";
+import { supabase } from "../../lib/supabaseClient";
+import styles from './map.styles';
 
 interface Report {
   id: string;
@@ -31,6 +31,7 @@ interface Report {
     username: string;
     profile_photo_url?: string;
   };
+  displayAddress?: string;
 }
 
 export default function MapPage() {
@@ -57,32 +58,63 @@ export default function MapPage() {
   }, []);
 
   const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      router.replace('/(auth)/login');
+      router.replace("/(auth)/login");
     }
   };
 
   const getUserLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Povolení odmítnuto', 'Bez povolení nelze zjistit polohu.');
+      if (status !== "granted") {
+        Alert.alert("Povolení odmítnuto", "Bez povolení nelze zjistit polohu.");
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({});
       setUserLocation(location);
     } catch (error) {
-      console.error('Error getting location:', error);
+      console.error("Error getting location:", error);
+    }
+  };
+
+  const getAddressFromCoords = async (
+    latitude: number,
+    longitude: number,
+  ): Promise<string | null> => {
+    try {
+      const results = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+      if (results && results.length > 0) {
+        const r = results[0];
+        const parts = [
+          r.name,
+          r.street,
+          r.city || r.subregion,
+          r.region,
+          r.country,
+        ]
+          .filter(Boolean)
+          .map((s) => String(s));
+        if (parts.length > 0) return parts.join(", ");
+      }
+      return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+    } catch (e) {
+      return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
     }
   };
 
   const loadReports = async () => {
     try {
       const { data, error } = await supabase
-        .from('reports')
-        .select(`
+        .from("reports")
+        .select(
+          `
           id,
           user_id,
           license_plate,
@@ -92,19 +124,22 @@ export default function MapPage() {
           created_at,
           status,
           profiles(username, profile_photo_url)
-        `)
-        .order('created_at', { ascending: false });
+        `,
+        )
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      // Transform the data to match our interface
-      const transformedData = data?.map(report => ({
-        ...report,
-        profiles: Array.isArray(report.profiles) ? report.profiles[0] : report.profiles
-      })) || [];
+      const transformedData =
+        data?.map((report) => ({
+          ...report,
+          profiles: Array.isArray(report.profiles)
+            ? report.profiles[0]
+            : report.profiles,
+        })) || [];
       setReports(transformedData as Report[]);
     } catch (error) {
-      console.error('Error loading reports:', error);
-      Alert.alert('Chyba', 'Nepodařilo se načíst reporty');
+      console.error("Error loading reports:", error);
+      Alert.alert("Chyba", "Nepodařilo se načíst reporty");
     } finally {
       setLoading(false);
     }
@@ -112,41 +147,54 @@ export default function MapPage() {
 
   const setupRealtimeSubscription = () => {
     const subscription = supabase
-      .channel('map-reports')
+      .channel("map-reports")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'reports',
+          event: "INSERT",
+          schema: "public",
+          table: "reports",
         },
         async (payload) => {
-          // Fetch the new report with profile data
+          const newReport = payload.new;
+          if (!newReport) return;
+
+          const fields = [
+            "id",
+            "user_id",
+            "license_plate",
+            "photo_url",
+            "latitude",
+            "longitude",
+            "created_at",
+            "status",
+            "profiles(username,profile_photo_url)",
+          ];
+
+          const selectString = fields.join(",");
+
           const { data } = await supabase
-            .from('reports')
-            .select(`
-              id,
-              user_id,
-              license_plate,
-              photo_url,
-              latitude,
-              longitude,
-              created_at,
-              status,
-              profiles(username, profile_photo_url)
-            `)
-            .eq('id', payload.new.id)
+            .from("reports")
+            .select(selectString)
+            .eq("id", newReport.id)
             .single();
 
-          if (data) {
-            // Transform the data to match our interface
-            const transformedData = {
-              ...data,
-              profiles: Array.isArray(data.profiles) ? data.profiles[0] : data.profiles
-            };
-            setReports(prev => [transformedData as Report, ...prev]);
-          }
-        }
+          if (!data) return;
+
+          const address = await getAddressFromCoords(
+            data.latitude,
+            data.longitude,
+          );
+
+          const transformedData = {
+            ...data,
+            profiles: Array.isArray(data.profiles)
+              ? data.profiles[0]
+              : data.profiles,
+            displayAddress: address,
+          };
+          setReports((prev) => [transformedData as Report, ...prev]);
+        },
       )
       .subscribe();
 
@@ -162,31 +210,31 @@ export default function MapPage() {
 
   const handleTabPress = (tab: string) => {
     switch (tab) {
-      case 'home':
-        router.push('/(main)/home');
+      case "home":
+        router.push("/(main)/home");
         break;
-      case 'map':
+      case "map":
         break;
-      case 'camera':
-        router.push('/(main)/home');
+      case "camera":
+        router.push("/(main)/home");
         break;
-      case 'leaderboard':
-        router.push('/(main)/leaderboard');
+      case "leaderboard":
+        router.push("/(main)/leaderboard");
         break;
-      case 'profile':
-        router.push('/(main)/profile');
+      case "profile":
+        router.push("/(main)/profile");
         break;
     }
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('cs-CZ', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return date.toLocaleDateString("cs-CZ", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -204,7 +252,7 @@ export default function MapPage() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-      
+
       <View style={styles.header}>
         <Text style={styles.title}>Mapa reportů</Text>
         <Text style={styles.subtitle}>{reports.length} reportů na mapě</Text>
@@ -229,7 +277,11 @@ export default function MapPage() {
             >
               <View style={styles.markerContainer}>
                 <View style={styles.redMarker}>
-                  <Ionicons name="car" size={16} color="#fff" />
+                  <Image
+                    source={{ uri: report.photo_url }}
+                    style={styles.markerImage}
+                    resizeMode="cover"
+                  />
                 </View>
               </View>
             </Marker>
@@ -262,19 +314,22 @@ export default function MapPage() {
           </View>
 
           {selectedReport && (
-            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}
+            >
               <Image
                 source={{ uri: selectedReport.photo_url }}
                 style={styles.modalImage}
                 resizeMode="cover"
               />
-              
+
               <View style={styles.modalInfo}>
                 <View style={styles.infoRow}>
                   <Ionicons name="person" size={20} color="#64748b" />
                   <Text style={styles.infoLabel}>Nahlásil:</Text>
                   <Text style={styles.infoValue}>
-                    {selectedReport.profiles?.username || 'Neznámý uživatel'}
+                    {selectedReport.profiles?.username || "Neznámý uživatel"}
                   </Text>
                 </View>
 
@@ -300,7 +355,8 @@ export default function MapPage() {
                   <Ionicons name="location" size={20} color="#64748b" />
                   <Text style={styles.infoLabel}>Poloha:</Text>
                   <Text style={styles.infoValue}>
-                    {selectedReport.latitude.toFixed(4)}, {selectedReport.longitude.toFixed(4)}
+                    {selectedReport.displayAddress ||
+                      `${selectedReport.latitude.toFixed(4)}, ${selectedReport.longitude.toFixed(4)}`}
                   </Text>
                 </View>
               </View>
@@ -314,70 +370,75 @@ export default function MapPage() {
   );
 }
 
-const styles = StyleSheet.create({
+/* moved to ./map.styles */
   container: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#f8fafc',
-    paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight || 0,
+    backgroundColor: "#f8fafc",
+    paddingTop: Platform.OS === "ios" ? 50 : StatusBar.currentHeight || 0,
   },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#e2e8f0",
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1e293b',
+    fontWeight: "700",
+    color: "#1e293b",
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#64748b",
     marginTop: 4,
   },
   mapContainer: {
     flex: 1,
-    position: 'relative',
+    position: "relative",
   },
   map: {
     flex: 1,
   },
   markerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  markerImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   redMarker: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#ef4444',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#ef4444",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
-    borderColor: '#fff',
-    shadowColor: '#000',
+    borderColor: "#fff",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
   },
   locationButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 20,
     right: 20,
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -385,61 +446,61 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    borderBottomColor: "#e2e8f0",
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1e293b',
+    fontWeight: "700",
+    color: "#1e293b",
   },
   closeModalButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
   },
   modalContent: {
     flex: 1,
   },
   modalImage: {
-    width: '100%',
+    width: "100%",
     height: 300,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: "#f1f5f9",
   },
   modalInfo: {
     padding: 20,
     gap: 16,
   },
   infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   infoLabel: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#64748b',
+    fontWeight: "500",
+    color: "#64748b",
     minWidth: 60,
   },
   infoValue: {
     fontSize: 16,
-    color: '#1e293b',
+    color: "#1e293b",
     flex: 1,
   },
   licensePlate: {
-    fontWeight: '600',
-    color: '#3b82f6',
+    fontWeight: "600",
+    color: "#3b82f6",
   },
 });
