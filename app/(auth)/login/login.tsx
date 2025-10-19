@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../../lib/supabaseClient";
 import { makeRedirectUri } from "expo-auth-session";
-import styles from './login.styles';
+import styles from "./login.styles";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -157,4 +151,3 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
- 
