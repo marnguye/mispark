@@ -1,10 +1,15 @@
-import { StyleSheet, Platform, StatusBar } from 'react-native';
+import { StyleSheet, Platform, StatusBar } from "react-native";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: "#f8fafc",
-    paddingTop: Platform.OS === "ios" ? 50 : StatusBar.currentHeight || 0,
+    //paddingTop: Platform.OS === "ios" ? 50 : StatusBar.currentHeight || 0,
   },
   header: {
     paddingHorizontal: 20,
@@ -22,7 +27,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   feedContent: {
-    paddingBottom: 140,
+    paddingBottom: 180,
   },
   reportItem: {
     backgroundColor: "#fff",

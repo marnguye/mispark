@@ -88,7 +88,7 @@ export default function ProfilePage() {
 
         const formatBirthdateForDisplay = (dateStr: string) => {
           const [year, month, day] = dateStr.split("-");
-          return `${day}-${month}-${year}`;
+          return `${day}.${month}.${year}`;
         };
 
         setValue("birthdate", formatBirthdateForDisplay(profile.birthdate));
@@ -188,7 +188,7 @@ export default function ProfilePage() {
 
       const formatBirthdateForDB = (dateStr: string) => {
         const [day, month, year] = dateStr.split("-");
-        return `${year}-${month}-${day}`;
+        return `${day}.${month}.${year}`;
       };
 
       const { error } = await supabase.from("profiles").upsert({
@@ -343,8 +343,8 @@ export default function ProfilePage() {
                 rules={{
                   required: "Datum narození je povinné",
                   pattern: {
-                    value: /^\d{2}-\d{2}-\d{4}$/,
-                    message: "Zadejte datum ve formátu DD-MM-YYYY",
+                    value: /^\d{2}.\d{2}.\d{4}$/,
+                    message: "Zadejte datum ve formátu DD.MM.YYYY",
                   },
                 }}
                 render={({ field: { onChange, onBlur, value } }) => (

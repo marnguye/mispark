@@ -16,11 +16,15 @@ import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { supabase } from "../../../lib/supabaseClient";
-import BottomNavbar from "../../../components/BottomNavbar";
-import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
+import { supabase } from "@/lib/supabaseClient";
+import BottomNavbar from "@/components/BottomNavbar";
+import type { Href } from "expo-router";
+import {
+  GestureHandlerRootView,
+  Swipeable,
+} from "react-native-gesture-handler";
 import { ADMIN_EMAIL, OCR_API_URL, OCR_API_KEY } from "@env";
-import styles from './home.styles';
+import styles from "./home.styles";
 
 interface Report {
   id: string;
@@ -389,16 +393,16 @@ export default function HomePage() {
       case "home":
         break;
       case "map":
-        router.push("/(main)/map");
+        router.push("/(main)/map" as Href);
         break;
       case "camera":
         setCameraModalVisible(true);
         break;
       case "leaderboard":
-        router.push("/(main)/leaderboard");
+        router.push("/(main)/leaderboard" as Href);
         break;
       case "profile":
-        router.push("/(main)/profile");
+        router.push("/(main)/profile" as Href);
         break;
     }
   };
@@ -497,7 +501,7 @@ export default function HomePage() {
         <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
 
         <View style={styles.header}>
-          <Text style={styles.title}>Reporty špatného parkování</Text>
+          <Text style={styles.title}>Reporty</Text>
         </View>
 
         <FlatList
@@ -584,10 +588,8 @@ export default function HomePage() {
             )}
           </View>
         </Modal>
-
         <BottomNavbar activeTab="home" onTabPress={handleTabPress} />
       </View>
     </GestureHandlerRootView>
   );
 }
-

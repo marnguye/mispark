@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from "@/lib/supabaseClient";
 import styles from './register.styles';
 
 export default function RegisterScreen() {
@@ -71,7 +71,7 @@ export default function RegisterScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Zaparkovals?</Text>
+          <Text style={styles.title}>mispark</Text>
           <Text style={styles.subtitle}>Registrace</Text>
         </View>
 
@@ -113,8 +113,8 @@ export default function RegisterScreen() {
             />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.registerButton, loading && styles.registerButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.registerButton, loading && styles.registerButtonDisabled]}
             onPress={handleRegister}
             disabled={loading}
           >
@@ -129,8 +129,8 @@ export default function RegisterScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity 
-            style={styles.googleButton} 
+          <TouchableOpacity
+            style={styles.googleButton}
             onPress={handleGoogleRegister}
           >
             <Ionicons name="logo-google" size={20} color="#4285f4" style={styles.googleIcon} />

@@ -71,7 +71,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Zaparkovals?</Text>
+          <Text style={styles.title}>mispark</Text>
           <Text style={styles.subtitle}>Přihlášení</Text>
         </View>
 

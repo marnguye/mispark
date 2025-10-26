@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { supabase } from "../../lib/supabaseClient";
+import {supabase} from "@/lib/supabaseClient";
 import styles from "./camera.styles";
 
 export default function HomePage() {

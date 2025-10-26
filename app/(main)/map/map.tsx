@@ -12,11 +12,12 @@ import {
   ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
+import type { Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import BottomNavbar from "../../components/BottomNavbar";
-import { supabase } from "../../lib/supabaseClient";
-import styles from './map.styles';
+import BottomNavbar from "@/components/BottomNavbar";
+import { supabase } from "@/lib/supabaseClient";
+import styles from "./map.styles";
 
 interface Report {
   id: string;
@@ -54,7 +55,8 @@ export default function MapPage() {
     checkUser();
     loadReports();
     getUserLocation();
-    setupRealtimeSubscription();
+    const cleanup = setupRealtimeSubscription();
+    return cleanup;
   }, []);
 
   const checkUser = async () => {
@@ -62,7 +64,7 @@ export default function MapPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      router.replace("/(auth)/login");
+      router.replace("/(auth)/login" as Href);
     }
   };
 
@@ -159,38 +161,38 @@ export default function MapPage() {
           const newReport = payload.new;
           if (!newReport) return;
 
-          const fields = [
-            "id",
-            "user_id",
-            "license_plate",
-            "photo_url",
-            "latitude",
-            "longitude",
-            "created_at",
-            "status",
-            "profiles(username,profile_photo_url)",
-          ];
-
-          const selectString = fields.join(",");
-
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("reports")
-            .select(selectString)
+            .select(
+              [
+                "id",
+                "user_id",
+                "license_plate",
+                "photo_url",
+                "latitude",
+                "longitude",
+                "created_at",
+                "status",
+                "profiles(username,profile_photo_url)",
+              ].join(","),
+            )
             .eq("id", newReport.id)
             .single();
 
-          if (!data) return;
+          if (error || !data) return;
+
+          const reportData = data as any;
 
           const address = await getAddressFromCoords(
-            data.latitude,
-            data.longitude,
+            reportData.latitude,
+            reportData.longitude,
           );
 
           const transformedData = {
-            ...data,
-            profiles: Array.isArray(data.profiles)
-              ? data.profiles[0]
-              : data.profiles,
+            ...reportData,
+            profiles: Array.isArray(reportData.profiles)
+              ? reportData.profiles[0]
+              : reportData.profiles,
             displayAddress: address,
           };
           setReports((prev) => [transformedData as Report, ...prev]);
@@ -211,18 +213,18 @@ export default function MapPage() {
   const handleTabPress = (tab: string) => {
     switch (tab) {
       case "home":
-        router.push("/(main)/home");
+        router.push("/(main)/home" as Href);
         break;
       case "map":
         break;
       case "camera":
-        router.push("/(main)/home");
+        router.push("/(main)/home" as Href);
         break;
       case "leaderboard":
-        router.push("/(main)/leaderboard");
+        router.push("/(main)/leaderboard" as Href);
         break;
       case "profile":
-        router.push("/(main)/profile");
+        router.push("/(main)/profile" as Href);
         break;
     }
   };

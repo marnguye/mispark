@@ -1,4 +1,5 @@
 import { Redirect } from "expo-router";
+import type { Href } from "expo-router";
 import "../global.css";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
@@ -17,5 +18,6 @@ export default function Index() {
 
   if (!redirectTo) return null;
 
-  return <Redirect href={redirectTo} />;
+  const href = (redirectTo === "home" ? "/(main)/home" : "/(auth)/login") as Href;
+  return <Redirect href={href} />;
 }
